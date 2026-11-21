@@ -85,7 +85,13 @@ ParameterManager::ParameterManager(Vehicle* vehicle)
     , _disableAllRetries                (false)
     , _indexBatchQueueActive            (false)
     , _totalParamCount                  (0)
+#if defined(__android__)
+    // Herelink fix: MAVLink FTP parameter download fails over the Herelink telemetry link and only
+    // adds retries/timeouts before falling back. Go straight to the conventional download.
+    , _tryftp                           (false)
+#else
     , _tryftp                           (vehicle->apmFirmware())
+#endif
 {
     if (_vehicle->isOfflineEditingVehicle()) {
         _loadOfflineEditingParams();
