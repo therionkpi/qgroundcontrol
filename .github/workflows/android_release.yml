@@ -15,6 +15,7 @@ on:
     - '*'
     paths-ignore:
       - 'docs/**'
+  workflow_dispatch:
 
 defaults:
   run:
@@ -84,7 +85,7 @@ jobs:
         run: echo "name=timestamp::$(date --utc +'%Y-%m-%d-%H\;%M\;%S')" >> $GITHUB_OUTPUT
 
       - name: ccache cache files
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path:         ~/.ccache
           key:          ${{ runner.os }}-ccache-${{steps.ccache_cache_timestamp.outputs.timestamp}}
@@ -130,7 +131,7 @@ jobs:
         run:  ccache -s
 
       - name: Save artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.ARTIFACT }}
           path: ${{ runner.temp }}/shadow_build_dir/package/${{ matrix.ARTIFACT }}
@@ -144,11 +145,3 @@ jobs:
           asset_name: ${{ matrix.ARTIFACT }}
           tag: ${{ github.ref }}
           overwrite: true
-
-      - name: Upload build to S3 Bucket
-        if:                 github.event_name == 'push'
-        working-directory:  ${{ runner.temp }}/shadow_build_dir/package
-        run: |
-              aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-              aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-              aws s3 cp ${{ matrix.ARTIFACT }} s3://qgroundcontrol/builds/${{ github.ref_name }}/${{ matrix.ARTIFACT }} --region us-west-2 --acl public-read
