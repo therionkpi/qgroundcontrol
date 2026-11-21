@@ -723,14 +723,24 @@ GstVideoReceiver::_filterParserCaps(GstElement* bin, GstPad* pad, GstElement* el
     if(gst_structure_has_name(structure, "video/x-h265")){
         filter = gst_caps_from_string("video/x-h265");
         if (gst_caps_can_intersect(srcCaps, filter)) {
+#if defined(__android__)
+            // Herelink/Android fix: byte-stream needs no codec_data (see note in _makeSource)
+            sinkCaps = gst_caps_from_string("video/x-h265,stream-format=byte-stream,alignment=au");
+#else
             sinkCaps = gst_caps_from_string("video/x-h265,stream-format=hvc1");
+#endif
         }
         gst_caps_unref(filter);
         filter = nullptr;
     } else if(gst_structure_has_name(structure, "video/x-h264")){
         filter = gst_caps_from_string("video/x-h264");
         if (gst_caps_can_intersect(srcCaps, filter)) {
+#if defined(__android__)
+            // Herelink/Android fix: byte-stream needs no codec_data (see note in _makeSource)
+            sinkCaps = gst_caps_from_string("video/x-h264,stream-format=byte-stream,alignment=au");
+#else
             sinkCaps = gst_caps_from_string("video/x-h264,stream-format=avc");
+#endif
         }
         gst_caps_unref(filter);
         filter = nullptr;
@@ -747,6 +757,31 @@ GstVideoReceiver::_filterParserCaps(GstElement* bin, GstPad* pad, GstElement* el
 
     return TRUE;
 }
+
+#if defined(__android__)
+// RTSP cameras such as Topotek/Viewpro omit sprop-parameter-sets from the SDP and send SPS/PPS only
+// in-band with IDR frames. Forcing stream-format=avc then produces caps without codec_data, the
+// downstream parser refuses them and the pipeline fails with "not-negotiated" (no video since 4.2.5).
+// On Android we keep parsebin on byte-stream (no codec_data needed) and make h264parse/h265parse
+// repeat SPS/PPS (and VPS) before every IDR so the MediaCodec decoder always gets them in-band.
+static void
+_qgcConfigureAutopluggedParser(GstBin* bin, GstBin* subBin, GstElement* element, gpointer data)
+{
+    Q_UNUSED(bin)
+    Q_UNUSED(subBin)
+    Q_UNUSED(data)
+
+    GstElementFactory* factory = gst_element_get_factory(element);
+    if (factory == nullptr) {
+        return;
+    }
+
+    const gchar* name = gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory));
+    if (g_strcmp0(name, "h264parse") == 0 || g_strcmp0(name, "h265parse") == 0) {
+        g_object_set(element, "config-interval", -1, nullptr);
+    }
+}
+#endif
 
 GstElement*
 GstVideoReceiver::_makeSource(const QString& uri)
@@ -825,6 +860,11 @@ GstVideoReceiver::_makeSource(const QString& uri)
         }
 
         g_signal_connect(parser, "autoplug-query", G_CALLBACK(_filterParserCaps), nullptr);
+
+#if defined(__android__)
+        qCWarning(VideoReceiverLog) << "Android: forcing H.264/H.265 byte-stream parser output (no codec_data needed)";
+        g_signal_connect(parser, "deep-element-added", G_CALLBACK(_qgcConfigureAutopluggedParser), nullptr);
+#endif
 
         gst_bin_add_many(GST_BIN(bin), source, parser, nullptr);
 
