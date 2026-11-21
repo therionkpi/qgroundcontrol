@@ -73,11 +73,16 @@ jobs:
           add-to-path: false
 
       - name: Install Android platform 33 and build-tools 33.0.2 (and remove other platforms)
+        shell: bash
         run: |
+            set +e +o pipefail
             SDKM=${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager
-            yes | $SDKM --install "platforms;android-33" "build-tools;33.0.2" > /dev/null
-            $SDKM --list_installed | grep "platforms;android-" | grep -v "platforms;android-33 " | awk '{print $1}' | xargs -r -I {} $SDKM --uninstall "{}"
-            ls ${ANDROID_SDK_ROOT}/platforms ${ANDROID_SDK_ROOT}/build-tools
+            yes 2>/dev/null | $SDKM --install "platforms;android-33" "build-tools;33.0.2"
+            set -e
+            test -d ${ANDROID_SDK_ROOT}/platforms/android-33
+            find ${ANDROID_SDK_ROOT}/platforms -mindepth 1 -maxdepth 1 ! -name android-33 -exec rm -rf {} +
+            echo "Platforms:"; ls ${ANDROID_SDK_ROOT}/platforms
+            echo "Build-tools:"; ls ${ANDROID_SDK_ROOT}/build-tools
 
       - name: Install ccache
         run:  sudo apt-get install ccache
