@@ -146,6 +146,19 @@ void UDPLink::_writeBytes(const QByteArray data)
 
     QMutexLocker locker(&_sessionTargetsMutex);
 
+#if defined(__android__)
+    // Herelink fix: the Herelink system sends telemetry to us from several local ports, which QGC
+    // auto-adds as extra targets. Every request then reaches the autopilot several times and every
+    // reply comes back several times over the slow telemetry radio. If the user configured explicit
+    // server addresses, send only to those.
+    if (_udpConfig->targetHosts().count() > 0) {
+        for (int i=0; i<_udpConfig->targetHosts().count(); i++) {
+            _writeDataGram(data, _udpConfig->targetHosts()[i]);
+        }
+        return;
+    }
+#endif
+
     // Send to all manually targeted systems
     for (int i=0; i<_udpConfig->targetHosts().count(); i++) {
         UDPCLient* target = _udpConfig->targetHosts()[i];
