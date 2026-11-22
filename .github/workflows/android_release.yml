@@ -124,6 +124,12 @@ jobs:
         run: |
             ${SOURCE_DIR}/tools/update_android_manifest_package.sh ${{ github.ref_name }}
 
+      - name: Use fixed debug keystore (same signature every build, allows updating over previous install)
+        run: |
+            mkdir -p ~/.android
+            cp ${{ github.workspace }}/android/herelink-debug.keystore ~/.android/debug.keystore
+            ls -la ~/.android
+
       - name: Build
         working-directory: ${{ runner.temp }}/shadow_build_dir
         env:
