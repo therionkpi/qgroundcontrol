@@ -18,6 +18,7 @@
 #include "AppSettings.h"
 
 #include <QStringListModel>
+#include <QTime>
 #include <QtConcurrent>
 #include <QTextStream>
 
@@ -28,7 +29,7 @@ static QtMessageHandler old_handler;
 static void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     const char symbols[] = { 'D', 'E', '!', 'X', 'I' };
-    QString output = QString("[%1] at %2:%3 - \"%4\"").arg(symbols[type]).arg(context.file).arg(context.line).arg(msg);
+    QString output = QTime::currentTime().toString("HH:mm:ss.zzz") + QStringLiteral(" ") + QString("[%1] at %2:%3 - \"%4\"").arg(symbols[type]).arg(context.file).arg(context.line).arg(msg);
 
     // Avoid recursion
     if (!QString(context.category).startsWith("qt.quick")) {
