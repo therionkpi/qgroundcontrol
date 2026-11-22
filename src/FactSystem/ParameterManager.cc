@@ -101,7 +101,13 @@ ParameterManager::ParameterManager(Vehicle* vehicle)
     _mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
     _initialRequestTimeoutTimer.setSingleShot(true);
+#if defined(__android__)
+    // Herelink fix: the first PARAM_REQUEST_LIST is often lost right after connect. Retry sooner
+    // (only fires if no PARAM_VALUE at all has arrived yet, so it does not restart a running download).
+    _initialRequestTimeoutTimer.setInterval(2000);
+#else
     _initialRequestTimeoutTimer.setInterval(5000);
+#endif
     connect(&_initialRequestTimeoutTimer, &QTimer::timeout, this, &ParameterManager::_initialRequestTimeout);
 
     _waitingParamTimeoutTimer.setSingleShot(true);
