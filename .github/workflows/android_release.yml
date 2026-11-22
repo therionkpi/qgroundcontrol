@@ -104,6 +104,8 @@ jobs:
             echo "base_dir = ${GITHUB_WORKSPACE}" > ~/.ccache/ccache.conf
             echo "compression = true" >> ~/.ccache/ccache.conf
             echo "compression_level = 5" >> ~/.ccache/ccache.conf
+            echo "compiler_check = content" >> ~/.ccache/ccache.conf
+            echo "max_size = 5G" >> ~/.ccache/ccache.conf
             ccache -s
             ccache -z
 
@@ -132,7 +134,7 @@ jobs:
           ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
         run:  |
             qmake -r ${SOURCE_DIR}/qgroundcontrol.pro -spec android-clang CONFIG+=${BUILD_TYPE} CONFIG+=installer ANDROID_ABIS="${{ matrix.eabi }}" ANDROID_SDK_BUILD_TOOLS_REVISION=33.0.2
-            make -j2
+            make -j$(nproc)
 
       - name: ccache post-run
         run:  ccache -s
