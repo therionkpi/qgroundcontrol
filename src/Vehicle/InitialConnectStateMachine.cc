@@ -290,6 +290,16 @@ void InitialConnectStateMachine::_stateRequestStandardModes(StateMachine *stateM
     Vehicle*                    vehicle         = connectMachine->_vehicle;
 
     qCDebug(InitialConnectStateMachineLog) << "_stateRequestStandardModes";
+#if defined(__android__)
+    // Herelink fix: ArduPilot answers AVAILABLE_MODES requests only partially over Herelink, QGC then
+    // floods the slow link with mode requests (seconds lost, and they compete with the parameter
+    // download). ArduPilot flight modes are provided by the APM firmware plugin anyway.
+    if (vehicle->apmFirmware()) {
+        qCDebug(InitialConnectStateMachineLog) << "_stateRequestStandardModes: skipped for ArduPilot on Android";
+        connectMachine->advance();
+        return;
+    }
+#endif
     connect(vehicle->_standardModes, &StandardModes::requestCompleted, connectMachine,
             &InitialConnectStateMachine::standardModesRequestCompleted);
     vehicle->_standardModes->request();
