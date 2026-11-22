@@ -162,7 +162,11 @@ private:
     bool _readParamNameProgressActive =     false;
     bool _writeParamProgressActive =        false;
 
+#if defined(__android__)
+    static const int    _maxInitialRequestListRetry = 10;       ///< Herelink fix: shorter 2s timeout, so more retries (~22s total as before)
+#else
     static const int    _maxInitialRequestListRetry = 4;        ///< Maximum retries for request list
+#endif
     int                 _initialRequestRetryCount;              ///< Current retry count for request list
     static const int    _maxInitialLoadRetrySingleParam = 5;    ///< Maximum retries for initial index based load of a single param
     static const int    _maxReadWriteRetry = 5;                 ///< Maximum retries read/write
